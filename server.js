@@ -5,14 +5,14 @@ const express = require('express')
 const app = express()
 
 app.use(express.static(__dirname + '/public'))
-app.set('view engin', 'ejs')
+app.set('view engine', 'ejs')
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 
 const { MongoClient } = require('mongodb')
 
 let db
-const url = `mongodb+srv://${process.env.MONGOID}:${process.env.MONGOPW}@codingapple.dke81js.mongodb.net/?retryWrites=true&w=majority`
+const url = `mongodb+srv://${process.env.MONGOID}:${process.env.MONGOPW}@arduion-led-connect.hv17jab.mongodb.net/`
 new MongoClient(url).connect().then((client)=>{
   console.log('DB연결성공')
   db = client.db('forum')
@@ -28,7 +28,7 @@ new MongoClient(url).connect().then((client)=>{
 // arduino 설정
 var SerialPort = require('serialport').SerialPort;
 var serialPort = new SerialPort({
-    path: 'COM5',
+    path: 'COM6',
     baudRate : 9600,
     // defaults for Arduino serial communication
     dataBits : 8,
@@ -37,19 +37,29 @@ var serialPort = new SerialPort({
     flowControl: false
 })
 
+// Arduino에서 받은 데이터를 저장할 변수
+let lastDistance = 0;
+
 // 아두이노 연결
-serialPort.on('open', function () {
+serialPort.on('open', () => {
   console.log('open serial communication');
-  serialPort.on('data', function (data) {
-    console.log(data.toString());
+  serialPort.on('data', data => {
+    const str = data.toString().trim();
+    if (str.startsWith('Distance:')) {
+      lastDistance = str.split(':')[1]; // 숫자만 저장
+    }
+    console.log(str);
   });
-  // console.log('Data: ', serialPort);
-})
+});
+
+// 웹에서 거리값 요청 시
+app.get('/distance', (req, res) => {
+  return res.send(lastDistance.toString()); // 거리값 출력 
+});
 
 
 // arduino web
 app.get('/led/:action', function (req, res) {
-    
   var action = req.params.action || req.params;
   
     
@@ -83,39 +93,4 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html')
 })
 
-app.get('/news', (req, res) => {
-  db.collection('post').insertOne({title: '타이틀'})
-  // res.send('뉴스다')
-})
 
-app.get('/list', async (req, res) => {
-  let result = await db.collection('post').find().toArray()
-  // console.log(result[0].title)
-
-  res.render('list.ejs', { post: result })
-})
-
-app.get('/time', async (req, res) => {
-  const date = new Date().toISOString().split('T')[0]
-  console.log(date)
-  res.render('time.ejs', { data: date })
-})
-
-app.get('/write', (req, res) => {
-  res.render('write.ejs')
-})
-
-app.post('/new-post', async (req, res) => {
-  try {
-    if (req.body.title == '' || req.body.content == '') {
-    res.send('제목이 없습니다.')
-    } else {
-      await db.collection('post').insertOne({ title: req.body.title, content: req.body.content })
-      res.redirect('/list')
-    }
-    } catch (e) {
-      console.log(e)
-      res.status(500).send('서버 에러 났습니다.')
-    }
-  
-})
