@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 페이지 - 거리 기록</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 50%;
+      margin: 20px auto;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    h1 { text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>관리자 페이지 - 거리 기록</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>시간</th>
+        <th>거리(cm)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% records.forEach(record => { 
+           const key = Object.keys(record)[1] || Object.keys(record)[0]; // _id 제외
+           const value = record[key];
+      %>
+        <tr>
+          <td><%= key %></td>
+          <td><%= value %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</body>
+</html>

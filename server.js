@@ -50,6 +50,20 @@ serialPort.on('open', () => {
     if (str.startsWith('Distance:')) {
       lastDistance = str.split(':')[1]; // 숫자만 저장
       io.emit('distance', lastDistance); // 웹으로 실시간 전송
+
+      // 거리가 10cm 이하일 때만 저장
+      if (lastDistance <= 10 && db) {
+        const now = new Date();
+        const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000); // UTC+9
+        const timestampKey = kst.toISOString().replace('T', ' ').split('.')[0]; // YYYY-MM-DD HH:MM:SS
+  
+        const record = {};
+        record[timestampKey] = lastDistance;
+  
+        db.collection('distance').insertOne(record)
+          .then(() => console.log('DB에 가까워진 거리 저장 완료'))
+          .catch(err => console.log('DB 저장 에러:', err));
+    }
     }
     console.log(str);
   });
@@ -97,3 +111,22 @@ app.get('/', (req, res) => {
 })
 
 
+// 관리자 페이지 - 거리 기록 확인
+app.get('/admin', async (req, res) => {
+  try {
+    if (!db) return res.send('DB 연결 안됨');
+
+    // distance 컬렉션에서 최근 50개 기록 조회 (내림차순)
+    const records = await db.collection('distance')
+      .find()
+      .sort({ _id: -1 })
+      .limit(50)
+      .toArray();
+
+    // ejs로 렌더
+    res.render('admin.ejs', { records });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('관리자 페이지 오류');
+  }
+});
