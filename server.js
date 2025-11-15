@@ -3,6 +3,8 @@ require('dotenv').config();
 
 const express = require('express')
 const app = express()
+const http = require('http').createServer(app);
+const io = require('socket.io')(http); // Socket.io 추가
 
 app.use(express.static(__dirname + '/public'))
 app.set('view engine', 'ejs')
@@ -16,7 +18,7 @@ const url = `mongodb+srv://${process.env.MONGOID}:${process.env.MONGOPW}@arduion
 new MongoClient(url).connect().then((client)=>{
   console.log('DB연결성공')
   db = client.db('forum')
-  app.listen(8080, () => {
+  http.listen(8080, () => {
   console.log('http://localhost:8080 에서 서버 실행 중')
 })
 }).catch((err)=>{
@@ -47,6 +49,7 @@ serialPort.on('open', () => {
     const str = data.toString().trim();
     if (str.startsWith('Distance:')) {
       lastDistance = str.split(':')[1]; // 숫자만 저장
+      io.emit('distance', lastDistance); // 웹으로 실시간 전송
     }
     console.log(str);
   });
